@@ -54,6 +54,9 @@
 SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
+short numero_bandeira = 'n';
+uint8_t NomeCara[255];
+
  typedef struct flag
 {
 	uint16_t comprimento;
@@ -97,8 +100,8 @@ static void MX_SPI1_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	sprintf(buffer, "jugjgculycuiygdig");
-    uint8_ buffer[255];
+	uint8_t nome[255];
+	sprintf(nome, "Arnold Schwaz.");
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -155,12 +158,6 @@ int main(void)
   italia.corListra2=WHITE;
   italia.corListra3=RED;
 
-
-  r2.x=100;
-  r2.y=100;
-  r2.w=50;
-  r2.h=70;
-  r2.cor=WHITE;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -168,7 +165,25 @@ int main(void)
   while (1)
   {
 
-	  //CDC_Transmit_ F5();// transformers
+	CDC_Transmit_FS(nome, strlen(nome));// transformers
+
+	if (numero_bandeira == 1)
+	{
+		ST7789_Fill_Color(RED);
+		//desenha bandeira austria
+	}
+
+	else if(numero_bandeira == 2)
+	{
+		ST7789_Fill_Color(BLUE);
+		//desenha bandeira alemanha
+	}
+	else if(numero_bandeira == 3)
+	{
+		ST7789_Fill_Color(GREEN);
+		//desenha bandeira italia
+	}
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -314,12 +329,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void DrawRectangle(ret* rect)
-{
-#ifdef ST7789
-	ST7789_DrawFilledRectangle(rect->x,rect->y,rect->w,rect->h,rect->cor);
-#endif
-}
+
 /* USER CODE END 4 */
 
 /**

@@ -32,8 +32,9 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-extern short numero_bandeira;
-extern uint8_t NomeCara[255];
+extern uint8_t rx;
+extern uint8_t nome[40];
+extern uint8_t band;
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -261,9 +262,17 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
-	if (*Len == 1){
-  numero_bandeira = Buf[0];
+	uint32_t tamanho=*Len;
+	band = Buf[0] - '0';
+	for(uint32_t i = 0; i<40; i++)
+	{
+		nome[i] = 0;
 	}
+	for(uint32_t i = 0; i<tamanho; i++)
+	{
+		nome[i] = Buf[i];
+	}
+	rx = 1;
 
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);

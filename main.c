@@ -20,18 +20,11 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "usb_device.h"
-#include "usbd_cdc_if.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#define ST7789
-//#define ST7735
-
-#ifdef ST7789
+#include "usbd_cdc_if.h"
 #include "ST7789/st7789.h"
-#elif ST7735
-#include "ST7735/st7735.h"
-#endif
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -54,13 +47,12 @@
 SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
-short numero_bandeira = 'n';
-uint8_t NomeCara[255];
+uint8_t rx = 0;
+uint8_t band;
+uint8_t nome[40];
 
- typedef struct flag
+typedef struct flag
 {
-	uint16_t comprimento;
-	uint16_t altura;
 	uint16_t quantListras;
 	uint16_t compListras;
 	uint16_t altListras;
@@ -69,14 +61,8 @@ uint8_t NomeCara[255];
 	uint16_t corListra3;
 }flag;
 
-flag austria, alemanha, italia;
-
-struct pixel
-{
-	uint16_t x;
-	uint16_t y;
-	uint16_t cor;
-};
+flag bandeiras[3];
+//austria, alemanha e hungria
 
 /* USER CODE END PV */
 
@@ -85,7 +71,9 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_SPI1_Init(void);
 /* USER CODE BEGIN PFP */
-
+void DrawRectangle(flag* flags);
+void DrawFlag(uint8_t bandeira);
+void WriteName(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -100,8 +88,7 @@ static void MX_SPI1_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	uint8_t nome[255];
-	sprintf(nome, "Arnold Schwaz.");
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -122,67 +109,44 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_SPI1_Init();
   MX_USB_DEVICE_Init();
+  MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
-#ifdef ST7789
   ST7789_Init();
-#elif ST7735
-  ST7735_Init();
-#endif
 
-  austria.comprimento=200;
-  austria.altura=120;
-  austria.quantListras=3;
-  austria.compListras=200;
-  austria.altListras=40;
-  austria.corListra1=RED;
-  austria.corListra2=WHITE;
-  austria.corListra3=RED;
+  bandeiras[0].quantListras=3;
+  bandeiras[0].compListras=200;
+  bandeiras[0].altListras=40;
+  bandeiras[0].corListra1=RED;
+  bandeiras[0].corListra2=WHITE;
+  bandeiras[0].corListra3=RED;
 
-  alemanha.comprimento=200;
-  alemanha.altura=120;
-  alemanha.quantListras=3;
-  alemanha.compListras=200;
-  alemanha.altListras=40;
-  alemanha.corListra1=BLACK;
-  alemanha.corListra2=RED;
-  alemanha.corListra3=YELLOW;
+  bandeiras[1].quantListras=3;
+  bandeiras[1].compListras=200;
+  bandeiras[1].altListras=40;
+  bandeiras[1].corListra1=BLACK;
+  bandeiras[1].corListra2=RED;
+  bandeiras[1].corListra3=YELLOW;
 
-  italia.comprimento=200;
-  italia.altura=120;
-  italia.quantListras=3;
-  italia.compListras=200;
-  italia.altListras=40;
-  italia.corListra1=GREEN;
-  italia.corListra2=WHITE;
-  italia.corListra3=RED;
-
+  bandeiras[2].quantListras=3;
+  bandeiras[2].compListras=200;
+  bandeiras[2].altListras=40;
+  bandeiras[2].corListra1=RED;
+  bandeiras[2].corListra2=WHITE;
+  bandeiras[2].corListra3=GREEN;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
-	CDC_Transmit_FS(nome, strlen(nome));// transformers
-
-	if (numero_bandeira == 1)
-	{
-		ST7789_Fill_Color(RED);
-		//desenha bandeira austria
-	}
-
-	else if(numero_bandeira == 2)
-	{
-		ST7789_Fill_Color(BLUE);
-		//desenha bandeira alemanha
-	}
-	else if(numero_bandeira == 3)
-	{
-		ST7789_Fill_Color(GREEN);
-		//desenha bandeira italia
-	}
+	  ST7789_Fill_Color(MAGENTA);
+	  if(rx == 1){
+	  	DrawFlag(band);
+	  	HAL_Delay(1000);
+	  	WriteName();
+	  	HAL_Delay(2000);
+	  }
 
     /* USER CODE END WHILE */
 
@@ -300,36 +264,45 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(ST7789_CS_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : ST7789_DC_Pin ST7789_RST_Pin */
-  GPIO_InitStruct.Pin = ST7789_DC_Pin|ST7789_RST_Pin;
+  /*Configure GPIO pins : ST7789_DC_Pin ST7789_RST_Pin PB3 PB4
+                           PB5 PB6 */
+  GPIO_InitStruct.Pin = ST7789_DC_Pin|ST7789_RST_Pin|GPIO_PIN_3|GPIO_PIN_4
+                          |GPIO_PIN_5|GPIO_PIN_6;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_9;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PA10 */
-  GPIO_InitStruct.Pin = GPIO_PIN_10;
+  /*Configure GPIO pins : PA9 PA10 */
+  GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB3 PB4 PB5 PB6 */
-  GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
 }
 
 /* USER CODE BEGIN 4 */
+void WriteName()
+{
+	uint16_t x = 30;
+	for(uint32_t i = 2; i<40; i++)
+	{
+		ST7789_WriteChar(x+=8, 220, nome[i], Font_7x10, WHITE, MAGENTA);
 
+	}
+
+}
+void DrawRectangle(flag* flags)
+{
+	ST7789_DrawFilledRectangle(inicioBandX, inicioBandY, flags->compListras, flags->altListras, flags->corListra1);
+	ST7789_DrawFilledRectangle(inicioBandX, inicioBandY + flags->altListras, flags->compListras, flags->altListras, flags->corListra2);
+	ST7789_DrawFilledRectangle(inicioBandX, inicioBandY + (2*flags->altListras), flags->compListras, flags->altListras, flags->corListra3);
+}
+void DrawFlag(uint8_t bandeira)
+{
+	ST7789_Fill_Color(MAGENTA);
+	DrawRectangle(&bandeiras[bandeira]);
+}
 /* USER CODE END 4 */
 
 /**
